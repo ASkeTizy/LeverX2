@@ -8,4 +8,9 @@ public class OrderQueue {
     public static BlockingQueue<Order> getOrderBlockingQueue() {
         return orderBlockingQueue;
     }
+    public static boolean isQueueInitial(){
+        return orderBlockingQueue.size() > 1;
+
+    }
+
 }
