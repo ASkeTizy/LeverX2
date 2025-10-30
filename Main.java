@@ -20,7 +20,6 @@ void main() {
     customers.add(new Customer().createOrder(new Order("Macbook", 2)));
     customers.add(new Customer().createOrder(new Order("Philips monitor", 1)));
     customers.add(new Customer().createOrder(new Order("TeslaX", 3)));
-//    new Customer().createOrder(new Order("Lenovo", 1));
     for (var customer : customers) {
         Future f = service.submit(customer);
         threads.add(f);
