@@ -1,24 +1,10 @@
 public class Product {
-    String name;
+    private String name;
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
 
-        Product product = (Product) o;
-        return name.equals(product.name) && quantity.equals(product.quantity) && price.equals(product.price);
-    }
 
-    @Override
-    public int hashCode() {
-        int result = name.hashCode();
-        result = 31 * result + quantity.hashCode();
-        result = 31 * result + price.hashCode();
-        return result;
-    }
-
-    Integer quantity;
-    Double price;
+    private Integer quantity;
+    private Double price;
 
     public Product(String name, Integer quantity, Double price) {
         this.name = name;
@@ -45,7 +31,21 @@ public class Product {
     public Double getPrice() {
         return price;
     }
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
 
+        Product product = (Product) o;
+        return name.equals(product.name) && quantity.equals(product.quantity) && price.equals(product.price);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name.hashCode();
+        result = 31 * result + quantity.hashCode();
+        result = 31 * result + price.hashCode();
+        return result;
+    }
     public void setPrice(Double price) {
         this.price = price;
     }
