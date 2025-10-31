@@ -49,13 +49,16 @@ public class Worker implements Runnable{
     @Override
     public void run() {
         try {
-            if(!orderBlockingQueue.isEmpty()) {
-                Order order = orderBlockingQueue.take();
-                Product product = getProductByOrder(order);
+            synchronized (this) {
 
-                if (product != null) {
-                    var orders = wareHouse.getOrders();
-                    orders.add(order);
+                if(!orderBlockingQueue.isEmpty()) {
+                    Order order = orderBlockingQueue.take();
+                    Product product = getProductByOrder(order);
+
+                    if (product != null) {
+                        var orders = wareHouse.getOrders();
+                        orders.add(order);
+                    }
                 }
             }
         } catch (InterruptedException e) {
