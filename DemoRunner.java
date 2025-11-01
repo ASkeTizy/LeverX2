@@ -16,12 +16,12 @@ public class DemoRunner {
         }
     }
 
-    public List<Customer> createCustomers() {
-        List<Customer> customers = new ArrayList<>();
-        customers.add(new Customer().createOrder(new Order("Lenovo", 1)));
-        customers.add(new Customer().createOrder(new Order("Macbook", 2)));
-        customers.add(new Customer().createOrder(new Order("Philips monitor", 1)));
-        customers.add(new Customer().createOrder(new Order("TeslaX", 3)));
+    public List<OrderConsumer> generateOrders() {
+        List<OrderConsumer> customers = new ArrayList<>();
+        customers.add(new Customer().consumeOrder("Lenovo", 1));
+        customers.add(new Customer().consumeOrder("Macbook", 2));
+        customers.add(new Customer().consumeOrder("Philips monitor", 1));
+        customers.add(new Customer().consumeOrder("TeslaX", 3));
         return customers;
     }
 
@@ -45,31 +45,25 @@ public class DemoRunner {
         return products;
     }
 
+    private void multiThreadExecutor(List<? extends Runnable> list, ExecutorService executor) {
+        var futures = list.stream().map(el -> CompletableFuture.runAsync(el, executor))
+                .toArray(CompletableFuture[]::new);
+        CompletableFuture.allOf(futures).join();
+    }
+
     public void demoRun() {
-        var customers = createCustomers();
-        List<Future<Runnable>> threads = new ArrayList<>();
-        ExecutorService service = Executors.newFixedThreadPool(10);
-
-        for (var customer : customers) {
-            Future f = service.submit(customer);
-            threads.add(f);
+        var orders = generateOrders();
+        try (var executor = Executors.newFixedThreadPool(10)) {
+            multiThreadExecutor(orders, executor);
+            var warehouse = new WareHouse();
+            var workers = warehouse.getWorkers().stream().map(worker->worker.produceOrder(warehouse)).toList();
+            multiThreadExecutor(workers, executor);
+            var totalNumberOfOrders = warehouse.totalNumberOfOrdersCalculation();
+            var totalProfit = warehouse.totalProfitCalculations();
+            var topThreeBestProducts = warehouse.topThreeBestProductsCalculation();
+            System.out.println(totalNumberOfOrders);
+            System.out.println(totalProfit);
+            topThreeBestProducts.forEach(System.out::println);
         }
-        futureCaller(threads);
-        threads.clear();
-        var warehouse = new WareHouse();
-        var workers = warehouse.getWorkers();
-        for (var worker : workers) {
-            Future f = service.submit(worker.takeOrderGetProduct());
-            threads.add(f);
-        }
-        futureCaller(threads);
-        service.shutdown();
-
-        var val1 = warehouse.totalNumberOfOrdersCalculation();
-        var val2 = warehouse.totalProfitCalculations();
-        var val3 = warehouse.topThreeBestProductsCalculation();
-        System.out.println(val1);
-        System.out.println(val2);
-        val3.forEach(System.out::println);
     }
 }
