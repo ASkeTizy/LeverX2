@@ -5,22 +5,27 @@ import java.util.concurrent.*;
 
 public class Worker implements Runnable{
     WareHouse wareHouse;
-    private  final BlockingQueue<Order> orderBlockingQueue= OrderQueue.getOrderBlockingQueue();
+
+    BlockingQueue<Order> orderBlockingQueue = OrderQueue.getOrderBlockingQueue();
+
+
     public Worker(WareHouse wareHouse) {
         this.wareHouse = wareHouse;
     }
-
     public Product getProductByOrder(Order order) {
 
         Product product = getProductByName(order);
 //        if(product != null) {
         var hashMap = wareHouse.getHashMap();
-        Integer quantity = hashMap.get(product);
-        if (order.productQuantity() <= quantity) {
-            hashMap.put(Objects.requireNonNull(product), quantity - order.productQuantity());
-            product.setQuantity(product.getQuantity() - order.productQuantity());
-            System.out.println("Product returned");
-            return product;
+        synchronized (this) {
+
+            Integer quantity = hashMap.get(product);
+            if (order.productQuantity() <= quantity) {
+                hashMap.put(Objects.requireNonNull(product), quantity - order.productQuantity());
+                product.setQuantity(product.getQuantity() - order.productQuantity());
+                System.out.println("Product returned");
+                return product;
+            }
         }
         return null;
 
@@ -42,20 +47,22 @@ public class Worker implements Runnable{
 
     }
 
-    public Worker takeOrderGetProduct() {
-     return this;
-    }
-
     @Override
     public void run() {
         try {
-            if(!orderBlockingQueue.isEmpty()) {
-                Order order = orderBlockingQueue.take();
-                Product product = getProductByOrder(order);
+            while (!orderBlockingQueue.isEmpty()) {
 
-                if (product != null) {
-                    var orders = wareHouse.getOrders();
-                    orders.add(order);
+                synchronized (this) {
+
+
+                    Order order = orderBlockingQueue.take();
+                    Product product = getProductByOrder(order);
+
+                    if (product != null) {
+                        var orders = wareHouse.getOrders();
+                        orders.add(order);
+                    }
+
                 }
             }
         } catch (InterruptedException e) {
