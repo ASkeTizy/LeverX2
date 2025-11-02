@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -16,12 +17,12 @@ public class DemoRunner {
         }
     }
 
-    public List<OrderConsumer> generateOrders() {
-        List<OrderConsumer> customers = new ArrayList<>();
-        customers.add(new Customer().consumeOrder("Lenovo", 1));
-        customers.add(new Customer().consumeOrder("Macbook", 2));
-        customers.add(new Customer().consumeOrder("Philips monitor", 1));
-        customers.add(new Customer().consumeOrder("TeslaX", 3));
+    public List<OrderProducer> generateOrders() {
+        List<OrderProducer> customers = new ArrayList<>();
+        customers.add(new Customer().produceOrder("Lenovo", 1));
+        customers.add(new Customer().produceOrder("Macbook", 2));
+        customers.add(new Customer().produceOrder("Philips monitor", 1));
+        customers.add(new Customer().produceOrder("TeslaX", 3));
         return customers;
     }
 
@@ -45,19 +46,23 @@ public class DemoRunner {
         return products;
     }
 
-    private void multiThreadExecutor(List<? extends Runnable> list, ExecutorService executor) {
-        var futures = list.stream().map(el -> CompletableFuture.runAsync(el, executor))
+    private CompletableFuture[] multiThreadExecutor(List<? extends Runnable> list, ExecutorService executor) {
+        return list.stream().map(el -> CompletableFuture.runAsync(el, executor))
                 .toArray(CompletableFuture[]::new);
-        CompletableFuture.allOf(futures).join();
+
     }
 
     public void demoRun() {
         var orders = generateOrders();
+        var warehouse = new WareHouse();
+        var workers = warehouse.getWorkers();
+        var tasks =Arrays.asList(orders,workers);
         try (var executor = Executors.newFixedThreadPool(10)) {
-            multiThreadExecutor(orders, executor);
-            var warehouse = new WareHouse();
-            var workers = warehouse.getWorkers().stream().map(worker->worker.produceOrder(warehouse)).toList();
-            multiThreadExecutor(workers, executor);
+
+            var orderFutures = multiThreadExecutor(orders, executor);
+            var workerFutures = multiThreadExecutor(workers, executor);
+
+            CompletableFuture.allOf(workerFutures).join();
             var totalNumberOfOrders = warehouse.totalNumberOfOrdersCalculation();
             var totalProfit = warehouse.totalProfitCalculations();
             var topThreeBestProducts = warehouse.topThreeBestProductsCalculation();

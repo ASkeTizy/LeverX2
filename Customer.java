@@ -1,11 +1,9 @@
-import java.util.concurrent.BlockingQueue;
-
 public class Customer  {
     private Order order;
-    public OrderConsumer consumeOrder(String name,Integer quantity) {
+    public OrderProducer produceOrder(String name, Integer quantity) {
         var order = new Order(name,quantity);
 
-        return new OrderConsumer(order);
+        return new OrderProducer(order);
     }
 
     public Order getOrder() {
