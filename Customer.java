@@ -1,26 +1,19 @@
-import java.util.concurrent.BlockingQueue;
+public class Customer  {
+    private Reservation reservation;
+    public ReservationProducer produceReservation(String name, Integer quantity) {
+        var reservation = generateReservation(name,quantity);
 
-public class Customer implements Runnable {
-    private Order order;
-    public Customer createOrder(Order order) {
-        this.order = order;
-        return this;
+        return new ReservationProducer(reservation);
     }
-
-    public Order getOrder() {
-        return order;
+    private Reservation generateReservation(String name, Integer quantity) {
+        return  new Reservation(name,quantity);
     }
-
-    @Override
-    public void run() {
-        BlockingQueue<Order> queue = OrderQueue.getOrderBlockingQueue();
-        try {
-            queue.put(getOrder());
-        } catch (InterruptedException e) {
-            System.out.println("Order exception");
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        }
+    public ReservationProducer declineReservation(String name,Integer quantity) {
+        var reservation = generateReservation(name, quantity);
+        return new ReservationProducer(reservation);
+    }
+    public Reservation getReservation() {
+        return reservation;
     }
 
 
