@@ -1,4 +1,6 @@
-public record Reservation(
-    String productName,
-    Integer quantity){
+record Reservation (
+        String productName,
+        Integer productQuantity
+        ){
+
 }

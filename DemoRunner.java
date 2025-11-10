@@ -17,12 +17,12 @@ public class DemoRunner {
         }
     }
 
-    public List<ReservationProducer> generateOrders() {
-        List<ReservationProducer> customers = new ArrayList<>();
-        customers.add(new Customer().produceReservation("Lenovo", 1));
-        customers.add(new Customer().produceReservation("Macbook", 2));
-        customers.add(new Customer().produceReservation("Philips monitor", 1));
-        customers.add(new Customer().produceReservation("TeslaX", 3));
+    public List<OrderProducer> generateOrders() {
+        List<OrderProducer> customers = new ArrayList<>();
+        customers.add(new Customer().produceOrder("Lenovo", 1));
+        customers.add(new Customer().produceOrder("Macbook", 2));
+        customers.add(new Customer().produceOrder("Philips monitor", 1));
+        customers.add(new Customer().produceOrder("TeslaX", 3));
         return customers;
     }
 
@@ -59,11 +59,16 @@ public class DemoRunner {
         var tasks =Arrays.asList(orders,workers);
         try (var executor = Executors.newFixedThreadPool(10)) {
 
-             multiThreadExecutor(orders, executor);
+            var orderFutures = multiThreadExecutor(orders, executor);
             var workerFutures = multiThreadExecutor(workers, executor);
 
             CompletableFuture.allOf(workerFutures).join();
-
+            var totalNumberOfOrders = warehouse.totalNumberOfOrdersCalculation();
+            var totalProfit = warehouse.totalProfitCalculations();
+            var topThreeBestProducts = warehouse.topThreeBestProductsCalculation();
+            System.out.println(totalNumberOfOrders);
+            System.out.println(totalProfit);
+            topThreeBestProducts.forEach(System.out::println);
         }
     }
 }

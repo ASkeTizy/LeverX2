@@ -1,70 +1,79 @@
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.*;
 
-public class Worker implements Runnable {
+public class Worker implements Runnable{
     WareHouse wareHouse;
 
-    BlockingQueue<Reservation> orderBlockingQueue = ReservationQueue.getOrderBlockingQueue();
+    BlockingQueue<Order> orderBlockingQueue = OrderQueue.getOrderBlockingQueue();
 
 
     public Worker(WareHouse wareHouse) {
         this.wareHouse = wareHouse;
     }
+    public Product getProductByOrder(Order order) {
 
+        Product product = getProductByName(order);
 
+        var hashMap = wareHouse.getHashMap();
+        synchronized (this) {
+
+            Integer quantity = hashMap.get(product);
+            if (order.productQuantity() <= quantity) {
+                hashMap.put(Objects.requireNonNull(product), quantity - order.productQuantity());
+                product.setQuantity(product.getQuantity() - order.productQuantity());
+                System.out.println("Product returned");
+                return product;
+            }
+        }
+        return null;
+
+    }
+
+    private Product getProductByName(Order order) {
+        List<Product> products = ProductCatalog.getProducts();
+        Optional<Product> productMaybe = products.parallelStream()
+                .filter(product -> product.getName().equals(order.productName()))
+                .findFirst();
+        if (productMaybe.isPresent()) {
+            Product product = productMaybe.get();
+            var reservation = getReservationByProduct(product);
+            if (product.getQuantity() >= order.productQuantity() + reservation.productQuantity()) {
+                return product;
+            }
+
+        }
+        return null;
+
+    }
+    private Reservation getReservationByProduct(Product product) {
+        var reservations = ReservationOrder.getReservations();
+        return reservations.stream()
+                .filter(reservation -> product.getName().equals(reservation.productName()))
+                .filter(reservation -> product.getQuantity() <= reservation.productQuantity())
+                .findFirst().orElse(new Reservation("",0));
+    }
     @Override
     public void run() {
         try {
             while (!orderBlockingQueue.isEmpty()) {
 
                 synchronized (this) {
-                    Reservation reservation = orderBlockingQueue.take();
-                    var productMaybe = findProduct(reservation);
-                    reserveProduct(productMaybe, reservation);
+
+
+                    Order order = orderBlockingQueue.take();
+                    Product product = getProductByOrder(order);
+
+                    if (product != null) {
+                        var orders = wareHouse.getOrders();
+                        orders.add(order);
+                    }
+
                 }
             }
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
         }
     }
-
-    private void reserveProduct(Optional<Product> productMaybe, Reservation reservation) {
-        try {
-
-            if (productMaybe.isPresent()) {
-                var product = productMaybe.get();
-                var storedQuantity = wareHouse.getHashMap().get(product);
-                var reservedProducts = wareHouse.getReservedProducts();
-                var reservedQuantity = reservedProducts.get(product);
-                if (reservedQuantity == null) {
-                    reservedQuantity = 0;
-                }
-                if (storedQuantity >= reservation.quantity() + reservedQuantity) {
-                    reservedProducts.put(product, reservation.quantity() + reservedQuantity);
-                } else {
-                    throw new IllegalArgumentException("Cannot be more products than in stock");
-                }
-            } else {
-                throw new IllegalArgumentException("NO such product");
-            }
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            Thread.currentThread().interrupt();
-        }
-    }
-
-    private Optional<Product> findProduct(Reservation reservation) {
-        List<Product> products = ProductCatalog.getProducts();
-        return products.parallelStream()
-                .filter(product -> product.getName().equals(reservation.productName()))
-                .findFirst();
-//        if()
-    }
-
 }
-
-

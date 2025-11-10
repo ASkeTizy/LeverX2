@@ -1,20 +1,19 @@
 public class Customer  {
+
     private Reservation reservation;
-    public ReservationProducer produceReservation(String name, Integer quantity) {
-        var reservation = generateReservation(name,quantity);
+    public OrderProducer produceOrder(String name, Integer quantity) {
+        var order = new Order(name,quantity);
 
-        return new ReservationProducer(reservation);
-    }
-    private Reservation generateReservation(String name, Integer quantity) {
-        return  new Reservation(name,quantity);
-    }
-    public ReservationProducer declineReservation(String name,Integer quantity) {
-        var reservation = generateReservation(name, quantity);
-        return new ReservationProducer(reservation);
-    }
-    public Reservation getReservation() {
-        return reservation;
+        return new OrderProducer(order);
     }
 
+
+    public void reserveProduct(String name,Integer quantity) {
+        reservation = new Reservation(name,quantity);
+        ReservationOrder.getReservations().add(reservation);
+    }
+    public void declineProduct() {
+        ReservationOrder.getReservations().remove(reservation);
+    }
 
 }
