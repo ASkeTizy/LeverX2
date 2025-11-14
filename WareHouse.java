@@ -4,13 +4,16 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 public class WareHouse {
-    private ConcurrentMap<Product, Integer> hashMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Product, Integer> hashMap = DemoRunner.generateWarehouseProducts();
+
     private List<Order> orders = new ArrayList<>();
+    private List<Reservation> reservations = new ArrayList<>();
+
     private final List<Worker> workers = new ArrayList<>();
 
     public WareHouse() {
         generateWorkers();
-        generateHasMap();
+
     }
 
     public ConcurrentMap<Product, Integer> getHashMap() {
@@ -24,15 +27,7 @@ public class WareHouse {
         workers.add(new Worker(this));
     }
 
-    private void generateHasMap() {
-        List<Product> products = ProductCatalog.getProducts();
-        hashMap = products.stream()
-                .collect(Collectors.toConcurrentMap(product -> product,
-                        product -> {
-                            product.setQuantity(product.getQuantity() - 2);
-                            return product.getQuantity();
-                        }));
-    }
+
 
     public List<Order> getOrders() {
         return orders;
@@ -42,17 +37,28 @@ public class WareHouse {
         return workers;
     }
 
+    private boolean compareOrderProductByName(Product product, Order order) {
+        return product.getName().equals(order.productName());
+    }
+    private Integer calculateOrderedSum(Product product) {
+        return orders.stream()
+                .filter(order -> compareOrderProductByName(product, order))
+                .mapToInt(Order::productQuantity)
+                .reduce(0, Integer::sum);
+    }
     public long totalNumberOfOrdersCalculation() {
         return orders.parallelStream().count();
     }
+
     private List<Product> executedOrders() {
         var products = ProductCatalog.getProducts();
         return products.parallelStream()
                 .peek(product -> {
-                    List<Order> order = orders.stream().filter(el->el.productName().equals(product.getName())).toList();
-                    product.setQuantity(order.stream().mapToInt(Order::productQuantity).reduce(0,Integer::sum));
+                    Integer orderedQuantity = calculateOrderedSum(product);
+                    product.setQuantity(orderedQuantity);
                 }).toList();
     }
+
     public Double totalProfitCalculations() {
 
         return executedOrders().parallelStream()
@@ -62,6 +68,9 @@ public class WareHouse {
 
     public List<Product> topThreeBestProductsCalculation() {
 
-        return executedOrders().parallelStream().sorted(Comparator.comparingInt(Product::getQuantity).reversed()).limit(3).toList();
+        return executedOrders().parallelStream()
+                .sorted(Comparator.comparingInt(Product::getQuantity).reversed())
+                .limit(3)
+                .toList();
     }
 }

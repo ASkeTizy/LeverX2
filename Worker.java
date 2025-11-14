@@ -5,22 +5,27 @@ import java.util.concurrent.*;
 
 public class Worker implements Runnable{
     WareHouse wareHouse;
-    private  final BlockingQueue<Order> orderBlockingQueue= OrderQueue.getOrderBlockingQueue();
+
+    BlockingQueue<Order> orderBlockingQueue = OrderQueue.getOrderBlockingQueue();
+
+
     public Worker(WareHouse wareHouse) {
         this.wareHouse = wareHouse;
     }
-
     public Product getProductByOrder(Order order) {
 
         Product product = getProductByName(order);
-//        if(product != null) {
+
         var hashMap = wareHouse.getHashMap();
-        Integer quantity = hashMap.get(product);
-        if (order.productQuantity() <= quantity) {
-            hashMap.put(Objects.requireNonNull(product), quantity - order.productQuantity());
-            product.setQuantity(product.getQuantity() - order.productQuantity());
-            System.out.println("Product returned");
-            return product;
+        synchronized (this) {
+
+            Integer quantity = hashMap.get(product);
+            if (order.productQuantity() <= quantity) {
+                hashMap.put(Objects.requireNonNull(product), quantity - order.productQuantity());
+                product.setQuantity(product.getQuantity() - order.productQuantity());
+                System.out.println("Product returned");
+                return product;
+            }
         }
         return null;
 
@@ -33,29 +38,38 @@ public class Worker implements Runnable{
                 .findFirst();
         if (productMaybe.isPresent()) {
             Product product = productMaybe.get();
-            if (product.getQuantity() >= order.productQuantity()) {
+            var reservation = getReservationByProduct(product);
+            if (product.getQuantity() >= order.productQuantity() + reservation.productQuantity()) {
                 return product;
             }
-            ;
+
         }
         return null;
 
     }
-
-    public Worker takeOrderGetProduct() {
-     return this;
+    private Reservation getReservationByProduct(Product product) {
+        var reservations = ReservationOrder.getReservations();
+        return reservations.stream()
+                .filter(reservation -> product.getName().equals(reservation.productName()))
+                .filter(reservation -> product.getQuantity() <= reservation.productQuantity())
+                .findFirst().orElse(new Reservation("",0));
     }
-
     @Override
     public void run() {
         try {
-            if(!orderBlockingQueue.isEmpty()) {
-                Order order = orderBlockingQueue.take();
-                Product product = getProductByOrder(order);
+            while (!orderBlockingQueue.isEmpty()) {
 
-                if (product != null) {
-                    var orders = wareHouse.getOrders();
-                    orders.add(order);
+                synchronized (this) {
+
+
+                    Order order = orderBlockingQueue.take();
+                    Product product = getProductByOrder(order);
+
+                    if (product != null) {
+                        var orders = wareHouse.getOrders();
+                        orders.add(order);
+                    }
+
                 }
             }
         } catch (InterruptedException e) {
